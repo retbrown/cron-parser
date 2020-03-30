@@ -120,10 +120,17 @@ func TestParseString(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			description:    "Invalid range",
-			argsInput:      []string{"10-1, 0, 1,15, *, 1-5, /usr/bin/find"},
-			expectedOutput: nil,
-			expectedError:  errors.New("Invalid minute definition"),
+			description: "Valid wrap around minute",
+			argsInput:   []string{"10-1, 0, 1,15, *, 1-5, /usr/bin/find"},
+			expectedOutput: &CronStruct{
+				Minute:     []string{"10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "0", "1"},
+				Hour:       []string{"0"},
+				DayOfMonth: []string{"1", "15"},
+				Month:      []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"},
+				DayOfWeek:  []string{"1", "2", "3", "4", "5"},
+				Command:    []string{"/usr/bin/find"},
+			},
+			expectedError: nil,
 		},
 		{
 			description:    "Invalid range 2",
