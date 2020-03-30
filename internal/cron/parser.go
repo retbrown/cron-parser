@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -33,7 +34,7 @@ func ParseString(args []string) (*CronStruct, error) {
 		return nil, fmt.Errorf("Invalid number of cron elements")
 	}
 
-	params := strings.Split(args[0], " ")
+	params := strings.Split(args[0], ", ")
 
 	if len(params) != 6 {
 		return nil, fmt.Errorf("Invalid number of cron elements")
@@ -59,12 +60,12 @@ func ParseString(args []string) (*CronStruct, error) {
 		return nil, err
 	}
 
-	parsedDayOfWeek, err := parseTime(params[4], errDayOfWeek, 0, 7)
+	parsedDayOfWeek, err := parseDayOfWeek(params[4], errDayOfWeek, 0, 7)
 	if err != nil {
 		return nil, err
 	}
 
-	parsedCommand, err := parseCommand(params[5])
+	parsedCommand, err := parseCommand(params[5:])
 	if err != nil {
 		return nil, err
 	}
@@ -79,14 +80,81 @@ func ParseString(args []string) (*CronStruct, error) {
 	}, nil
 }
 
-func parseCommand(value string) ([]string, error) {
-	found, _ := regexp.MatchString(`^[a-zA-Z 0-9\,\-\/\.]*$`, value)
+func parseCommand(value []string) ([]string, error) {
+	if len(value) == 0 {
+		return nil, errCommand
+	}
+
+	found, _ := regexp.MatchString(`^[a-zA-Z 0-9\,\-\/\.]*$`, value[0])
 
 	if !found {
 		return nil, errCommand
 	}
 
-	return []string{value}, nil
+	return value, nil
+}
+
+func parseDayOfWeek(value string, errValue error, min int64, max int64) ([]string, error) {
+	value = strings.TrimRight(value, ",")
+
+	found, _ := regexp.MatchString(`^[a-zA-Z0-9\,\*\-\/]*$`, value)
+	if !found {
+		return nil, errValue
+	}
+
+	if len(value) == 0 {
+		return nil, errValue
+	}
+
+	if foundDayString, _ := regexp.MatchString(`^[a-zA-Z\-]*$`, value); foundDayString {
+		if strings.Contains(value, "-") {
+			values := strings.Split(value, "-")
+
+			minDay, err := convertStringToNumber(values[0])
+			if err != nil {
+				return nil, err
+			}
+
+			maxDay, err := convertStringToNumber(values[1])
+			if err != nil {
+				return nil, err
+			}
+
+			return parseTime(minDay+"-"+maxDay, errValue, min, max)
+
+		} else {
+			returnedDayOfWeek, err := convertStringToNumber(value)
+			if err != nil {
+				return nil, err
+			}
+
+			return []string{returnedDayOfWeek}, nil
+		}
+
+	} else {
+		return parseTime(value, errValue, min, max)
+	}
+}
+
+func convertStringToNumber(value string) (string, error) {
+	switch value {
+	case "MON":
+		return "0", nil
+	case "TUE":
+		return "1", nil
+	case "WED":
+		return "2", nil
+	case "THU":
+		return "3", nil
+	case "FRI":
+		return "4", nil
+	case "SAT":
+		return "5", nil
+	case "SUN":
+		return "6", nil
+	}
+
+	return "", errors.New("Invalid day string")
 }
 
 func parseTime(value string, errValue error, min int64, max int64) ([]string, error) {
@@ -131,25 +199,36 @@ func parseTime(value string, errValue error, min int64, max int64) ([]string, er
 	if strings.Contains(value, "-") {
 		values := strings.Split(value, "-")
 
-		minValue, err := strconv.ParseInt(values[0], 10, 64)
-		maxValue, err := strconv.ParseInt(values[1], 10, 64)
+		leftValue, err := strconv.ParseInt(values[0], 10, 64)
+		rightValue, err := strconv.ParseInt(values[1], 10, 64)
 		if err != nil {
 			return nil, errValue
 		}
 
-		if minValue > maxValue {
+		if leftValue > rightValue {
+			if leftValue < min {
+				return nil, errValue
+			}
+
+			if rightValue+1 > max {
+				return nil, errValue
+			}
+
+			firstValues := getValues(leftValue, max)
+			secondValues := getValues(min, rightValue+1)
+
+			return append(firstValues, secondValues...), err
+		}
+
+		if leftValue < min {
 			return nil, errValue
 		}
 
-		if minValue < min {
+		if rightValue+1 > max {
 			return nil, errValue
 		}
 
-		if maxValue+1 > max {
-			return nil, errValue
-		}
-
-		return getValues(minValue, maxValue+1), nil
+		return getValues(leftValue, rightValue+1), nil
 	}
 
 	if strings.Contains(value, ",") {

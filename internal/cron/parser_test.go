@@ -55,6 +55,58 @@ func TestParseString(t *testing.T) {
 			expectedError: nil,
 		},
 		{
+			description: "Valid Day of week",
+			argsInput:   []string{"*/30, 0, 1,15, *, MON-FRI, /usr/bin/find"},
+			expectedOutput: &CronStruct{
+				Minute:     []string{"0", "30"},
+				Hour:       []string{"0"},
+				DayOfMonth: []string{"1", "15"},
+				Month:      []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"},
+				DayOfWeek:  []string{"0", "1", "2", "3", "4"},
+				Command:    []string{"/usr/bin/find"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "Valid Single Day of week",
+			argsInput:   []string{"*/30, 0, 1,15, *, WED, /usr/bin/find"},
+			expectedOutput: &CronStruct{
+				Minute:     []string{"0", "30"},
+				Hour:       []string{"0"},
+				DayOfMonth: []string{"1", "15"},
+				Month:      []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"},
+				DayOfWeek:  []string{"2"},
+				Command:    []string{"/usr/bin/find"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "Valid gap range Day of week",
+			argsInput:   []string{"*/30, 0, 1,15, *, 4-0, /usr/bin/find"},
+			expectedOutput: &CronStruct{
+				Minute:     []string{"0", "30"},
+				Hour:       []string{"0"},
+				DayOfMonth: []string{"1", "15"},
+				Month:      []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"},
+				DayOfWeek:  []string{"4", "5", "6", "0"},
+				Command:    []string{"/usr/bin/find"},
+			},
+			expectedError: nil,
+		},
+		{
+			description: "multi part command",
+			argsInput:   []string{"*/30, 0, 1,15, *, 4-0, /usr/bin/find test file.txt"},
+			expectedOutput: &CronStruct{
+				Minute:     []string{"0", "30"},
+				Hour:       []string{"0"},
+				DayOfMonth: []string{"1", "15"},
+				Month:      []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"},
+				DayOfWeek:  []string{"4", "5", "6", "0"},
+				Command:    []string{"/usr/bin/find test file.txt"},
+			},
+			expectedError: nil,
+		},
+		{
 			description: "Valid cron all star",
 			argsInput:   []string{"*, *, *, *, *, /usr/bin/find"},
 			expectedOutput: &CronStruct{
